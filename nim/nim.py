@@ -105,7 +105,7 @@ class NimAI():
         state_tuple = tuple(state)
         
         # return the q value for q(s, a) or 0 if there isn't one
-        return self.q.get(state_tuple, action, 0)
+        return self.q.get((state_tuple, action), 0)
         
 
     def update_q_value(self, state, action, old_q, reward, future_rewards):
@@ -124,7 +124,7 @@ class NimAI():
         is the sum of the current reward and estimated future rewards.
         """
         # calculate the new q value
-        new_q = old_q + self.alpha * ((reward + future_rewards) - old_q)
+        new_q = old_q + self.alpha * (reward + future_rewards - old_q)
 
         # update the q value for q(s, a) with the new q value
         self.q[tuple(state), action] = new_q
@@ -139,8 +139,11 @@ class NimAI():
         Q-value in `self.q`. If there are no available actions in
         `state`, return 0.
         """
-        raise NotImplementedError
-
+        actions = Nim.available_actions(state)
+        return max(
+            (self.q.get((tuple(state), action), 0) for action in actions),
+            default=0
+        )
     def choose_action(self, state, epsilon=True):
         """
         Given a state `state`, return an action `(i, j)` to take.
@@ -156,8 +159,15 @@ class NimAI():
         If multiple actions have the same Q-value, any of those
         options is an acceptable return value.
         """
-        raise NotImplementedError
-
+        actions = list(Nim.available_actions(state))
+        
+        # if epsilon is true then explore(epsilon-greedy policy) with self.epsilon probability
+        if epsilon and random.random() <= self.epsilon:
+            return random.choice(actions)
+        else:
+            # exploit 
+            return max(actions, key=lambda action: self.q.get(tuple(state), action), default=actions[0])
+        
 
 def train(n):
     """
